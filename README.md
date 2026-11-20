@@ -217,10 +217,24 @@ More detailed status messages may be added for debugging and user feedback.
 
 ## 5. Project Structure
 
-Planned repository structure:
-
 ```text
-Project (TBA)
+ChequeDetector/
+├── detection/
+│   ├── detector.py         # detect_cheque(image) -> straightened colour crop or None
+│   ├── run_detector.py     # try it on a photo or folder; saves overlay + crop to output/
+│   ├── evaluate.py         # success rate, false positive rate, timing -> results.csv
+│   └── make_test_image.py  # makes a fake tilted cheque photo for quick testing
+├── requirements.txt
+└── README.md
+```
+
+**Quick start**
+
+```bash
+pip install -r requirements.txt
+python detection/make_test_image.py
+python detection/run_detector.py synthetic_cheque.jpg
+python detection/evaluate.py test_images   # needs test_images/cheques and test_images/no_cheque
 ```
 
 ### Module Interface

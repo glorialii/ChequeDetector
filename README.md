@@ -1,369 +1,107 @@
-
 # ChequeDetector
 ### Document Detection and Adaptive Image Enhancement
 
 **COMP 4102 – Computer Vision | Carleton University**
-
 **Team:** Gloria Li & Gillian Gonzales
 
-## 1. Project Overview
+## Overview
 
-ChequeDetector is a computer vision application designed to automatically detect, extract, and enhance cheque images captured using a smartphone or camera.
+ChequeDetector takes a photo of a cheque (PNG or JPG), finds it, straightens it, and then enhances it so it's easier to read.
 
-The system takes a single PNG or JPG image containing a cheque, identifies its boundaries, corrects perspective distortion, and applies image enhancement techniques to improve readability.
+Our project has two parts:
 
-The project focuses on two main components:
+1. **Detection (Gloria):** find the cheque's four corners and correct the perspective.
+2. **Enhancement (Gillian):** improve the readability of the straightened cheque.
 
-1. **Cheque Detection and Extraction:** Locate the cheque within an image, identify its four corners, and perform perspective correction.
-2. **Adaptive Image Enhancement:** Improve the readability of the extracted cheque using image processing techniques.
+We test only with fictional or voided cheques. This is not meant for real cheque validation or banking.
 
-The primary goal is to produce a correctly extracted, readable cheque image while evaluating detection accuracy, readability, and processing speed.
+**Status:** in development.
 
-**Current status:** In-development / Implementation
-
----
-
-## 2. Project Objectives
-
-- Detect cheque boundaries in photographs.
-- Identify the four corners of a cheque.
-- Crop and correct perspective distortion.
-- Handle invalid inputs and detection failures. (OPT? EDGE CASES? ADD LATER)
-- Improve cheque readability using image enhancement.
-- Compare enhancement methods against a baseline.
-- Evaluate detection success, readability, and runtime.
-
-### Project Scope
-
-- Input: One photograph containing a cheque.
-- Supported formats: `.png`, `.jpg`, `.jpeg`.
-- All four cheque corners should be visible.
-- Output: A perspective-corrected and enhanced cheque image.
-- Testing: Photographs of fictional or voided cheques with no sensitive banking information.
-
-The application is not intended for cheque validation, bank deposits, or financial transaction processing.
-
----
-
-## 3. System Pipeline
+## Pipeline
 
 ```text
-Input Image (PNG/JPEG)
-        |
-        v
-Image Validation
-        |
-        v
-Grayscale Conversion
-        |
-        v
-Gaussian Blur
-        |
-        v
-Canny Edge Detection
-        |
-        v
-Contour Detection
-        |
-        v
-Quadrilateral Approximation
-        |
-        v
-Geometric Validation
-        |
-        v
-Four-Corner Detection
-        |
-        v
-Perspective Transformation
-        |
-        v
-Return Corrected Cheque Image
-        |
-        v
-Image Enhancement (GILLIAN TO ADD)
-        |
-        v
-Final Enhanced Image
+Input photo -> Validate -> Blur -> Edge detection (per colour channel) -> Contours
+  -> Find a 4-sided shape -> Check it looks like a cheque -> Order corners
+  -> Perspective warp -> Enhancement -> Final image
 ```
 
-### 3.1 Image Preprocessing
+**Detection.** We blur the colour image and run Canny edge detection on each of the blue, green and red channels, then combine the results. We don't convert to grayscale first. We then find contours, simplify them with `approxPolyDP`, and keep the first shape that passes our checks:
 
-The input image is converted to grayscale to simplify processing.
+- exactly 4 corners
+- convex
+- covers at least 10% of the photo
+- doesn't touch the photo's border, since that usually means a corner is cut off
+- has a cheque-like width-to-height ratio (1.8 to 3.2)
 
-Gaussian blur is applied to reduce image noise and suppress small details that could interfere with edge detection.
+Finally, we order the corners and use `getPerspectiveTransform` and `warpPerspective` to get a flat, colour crop.
 
-**Planned methods:**
-- Grayscale conversion
-- Gaussian filtering
+**Enhancement.** We're still choosing a method. Options include adaptive thresholding, local contrast enhancement, illumination correction and Retinex-based enhancement. We'll compare each one against a simple baseline.
 
-### 3.2 Edge Detection
+## Using it
 
-Canny edge detection is used to identify intensity changes that may correspond to cheque boundaries.
-
-**Planned method:**
-- Canny Edge Detection
-
-### 3.3 Contour Detection
-
-Contours are extracted from the edge map to identify possible document boundaries.
-
-Candidate contours are evaluated based on their size and geometric properties.
-
-**Planned methods:**
-- `cv2.findContours()`
-- Contour area filtering
-- Contour approximation using `cv2.approxPolyDP()`
-
-### 3.4 Quadrilateral Detection
-
-The detector searches for a suitable four-sided polygon representing the cheque boundary.
-
-Candidate validation includes:
-
-- Four detected vertices
-- Convex polygon geometry
-- Minimum area requirement
-- Plausible cheque proportions
-- Sufficient distance from image boundaries
-
-### 3.5 Perspective Correction
-
-After identifying the four corners, the system applies a perspective transformation to produce a rectangular cheque image.
-
-**Planned methods:**
-- Corner ordering
-- `cv2.getPerspectiveTransform()`
-- `cv2.warpPerspective()`
-
-The corrected image is preserved in colour before being passed to the enhancement module.
-
-### 3.6 Image Enhancement
-
-The extracted cheque is passed to the enhancement module to improve readability.
-
-Potential techniques under consideration include:
-
-- Adaptive thresholding
-- Local contrast enhancement
-- Illumination correction
-- Retinex-based enhancement
-- Single-image deblurring (optional)
-
-The final enhancement method will be selected based on feasibility, research, and experimental results.
-
----
-
-## 4. Edge Cases and Error Handling (TO EDIT)
-
-The system should handle unexpected inputs and detection failures without producing misleading results.
-
-| Scenario | Expected Behaviour | Status |
-|---|---|---|
-| All four corners visible and cheque detected | Crop, straighten, and enhance the cheque | SUCCESS |
-| One or more corners outside the image frame | Reject detection and request another photograph | FAILED |
-| Image does not contain a cheque | Reject if no valid cheque candidate is identified | FAILED |
-| Image contains another rectangular object | Apply additional validation; reject or flag uncertain candidates | UNCERTAIN |
-| Image is too dark or blurry | Attempt detection; reject or flag if confidence is insufficient | UNCERTAIN |
-| Unsupported image format | Display an input validation error | FAILED |
-| Corrupted or unreadable image | Display an input validation error | FAILED |
-| Multiple rectangular objects detected | Evaluate candidates and reject ambiguous results | UNCERTAIN |
-| Cheque boundary blends into background | Attempt alternative preprocessing or report failure | UNCERTAIN |
-
-**Note:** These are intended behaviours. A basic geometric detector cannot guarantee that a detected rectangle is a cheque or that a partially visible cheque will always be rejected.
-
-### 4.1 Detection Validation
-
-Before accepting a detected contour, the system will evaluate:
-
-1. **Corner count:** The candidate should contain four vertices.
-2. **Convexity:** The candidate should form a convex quadrilateral.
-3. **Area:** The candidate should occupy a reasonable portion of the image.
-4. **Aspect ratio:** The corrected candidate should have plausible cheque-like dimensions.
-5. **Border clearance:** Detected corners should not be too close to the image boundaries.
-
-Additional cheque-specific validation may be investigated if time permits.
-
-### 4.2 Detection Status
-
-The system will distinguish between three outcomes:
-
-**SUCCESS**
-- A suitable document boundary is detected.
-- Geometric validation passes.
-- Perspective correction is performed.
-- The corrected image is returned.
-
-**UNCERTAIN**
-- A possible document is detected.
-- Validation is insufficient or ambiguous.
-- The image is not automatically passed to enhancement.
-
-**FAILED**
-- The input image is invalid, or no acceptable document boundary is found.
-- No corrected image is returned.
-- The user is prompted to provide another image.
-
-### 4.3 Failure Handling
-
-The detector's initial integration interface will return:
-
-- A BGR `uint8` NumPy array when detection succeeds.
-- `None` when detection fails or is rejected.
-
-More detailed status messages may be added for debugging and user feedback.
-
----
-
-## 5. Project Structure
-
-Planned repository structure:
-
-```text
-Project (TBA)
+```bash
+pip install -r requirements.txt
+python detection/make_test_image.py                    # makes a fake tilted cheque
+python detection/run_detector.py synthetic_cheque.jpg  # saves overlay + crop to output/
+python detection/evaluate.py test_images               # success rate, false positives, timing
 ```
 
-### Module Interface
+`evaluate.py` expects two folders: `test_images/cheques/` for photos that should be detected, and `test_images/no_cheque/` for photos that should be rejected.
 
-The detector and enhancer will exchange NumPy arrays rather than image file paths.
+In code, the detector and enhancer pass NumPy arrays to each other:
 
 ```python
-# Planned integration interface
-
 image = cv2.imread("sample_cheque.jpg")
-
-cropped = detect_cheque(image)
-
+cropped = detect_cheque(image)        # colour BGR crop, or None if no cheque found
 if cropped is not None:
     enhanced = enhance_cheque(cropped)
 ```
 
-The detector must return a colour BGR image. The enhancer may return a grayscale or binary image depending on the selected method.
+## Project structure
 
----
+```text
+detection/
+  detector.py          detect_cheque(image)
+  run_detector.py      try it on a photo or folder
+  evaluate.py          metrics for the report
+  make_test_image.py   synthetic test photo
+requirements.txt
+```
 
-## 6. Testing and Evaluation
+## Edge cases
 
-The application will be evaluated using photographs of cheques under different conditions.
+| Scenario | What should happen |
+|---|---|
+| Full cheque visible | Crop, straighten and enhance |
+| A corner is outside the photo | Reject |
+| No cheque in the photo | Reject |
+| Another rectangle (book, phone) | Reject if it isn't cheque-shaped (may still pass) |
+| Too dark or blurry | Try anyway, reject if no valid shape |
+| Unsupported or corrupted file | Show an input error |
 
-### 6.1 Test Conditions
+A geometric detector can't fully guarantee that a rectangle is a cheque. This is one of the limitations we'll discuss.
 
-- Normal lighting
-... TBA
+## Evaluation
 
-### 6.2 Evaluation Metrics
+- **Detection success rate:** % of cheque photos detected correctly
+- **False positive rate:** % of non-cheque photos wrongly accepted
+- **Readability:** before vs. after enhancement, using OCR accuracy or a readability rubric
+- **Processing time:** average and median per image
 
-**Detection Success Rate**
+## Roadmap
 
-Percentage of cheque photographs where the document is correctly detected and perspective-corrected.
+- [x] Detection pipeline (edges, contours, corners, perspective correction)
+- [x] Geometric validation and invalid input handling
+- [x] Evaluation script
+- [ ] Collect real test photos and tune detection
+- [ ] Enhancement baseline and advanced method
+- [ ] Integrate detection and enhancement
+- [ ] Evaluate, write the report and prepare the demo
 
-**False Positive Rate**
+## Team
 
-Percentage of negative test images incorrectly accepted as valid cheque detections.
+- **Gloria:** detection, validation, detection testing and integration
+- **Gillian:** enhancement research, implementation, readability evaluation and documentation
+- **Both:** dataset, evaluation, final report and demo
 
-**Readability**
-
-Comparison of the extracted image before and after enhancement using OCR character accuracy against known fictional text or a documented human readability rubric.
-
-**Processing Time**
-
-Average and median execution time per image.
-
-**Optional Geometric Accuracy**
-
-Comparison of detected document corners against manually annotated ground-truth corners.
-
-### 6.3 Expected Outputs
-
-The system will save or display:
-
-1. Original photograph
-2. Detection overlay showing the identified cheque boundary
-3. Perspective-corrected cheque crop
-4. Enhanced cheque image
-5. Evaluation results
-
----
-
-## 7. Team Responsibilities
-
-### Gloria – Detection and Extraction
-
-- Image input handling
-- Image preprocessing
-- Edge detection
-- Contour detection
-- Four-corner identification
-- Geometric validation
-- Perspective transformation
-- Detection testing and failure analysis
-- Integration with enhancement module
-
-### Gillian – Image Enhancement and Documentation
-
-- Research enhancement techniques
-- Implement image enhancement algorithms
-- Compare enhancement methods
-- Evaluate readability improvements
-- Document experimental results and limitations
-
-### Shared Responsibilities
-
-- Dataset preparation
-- Pipeline integration
-- Evaluation methodology
-- Testing
-- Final report
-- Project demonstration
-
----
-
-## 8. Development Roadmap
-
-### Phase 1: Detection Baseline
-- [ ] Implement image preprocessing
-- [ ] Implement Canny edge detection
-- [ ] Implement contour detection
-- [ ] Identify document corners
-- [ ] Implement perspective correction
-
-### Phase 2: Validation and Error Handling
-- [ ] Validate quadrilateral geometry
-- [ ] Handle missing or incomplete document boundaries
-- [ ] Handle unrelated input images
-- [ ] Handle invalid image files
-- [ ] Test detection failures
-
-### Phase 3: Enhancement
-- [ ] Implement a simple enhancement baseline
-- [ ] Research and select an advanced enhancement method
-- [ ] Implement selected enhancement technique
-- [ ] Compare enhancement outputs
-
-### Phase 4: Integration and Evaluation
-- [ ] Integrate detection and enhancement modules
-- [ ] Build a reproducible test dataset
-- [ ] Evaluate detection success and false positives
-- [ ] Evaluate readability improvements
-- [ ] Measure processing time
-- [ ] Prepare final report and demonstration
-
----
-
-## 9. Technologies
-
-**Language:** Python
-
-**Planned libraries:**
-- OpenCV
-- NumPy
-
-Additional libraries may be introduced depending on the selected enhancement and evaluation methods.
-
----
-
-## 10. Current Development Status
-
-The project is currently in the development phase.
-
-**Target:** A working, evaluated end-to-end prototype for the COMP 4102 final project.
+**Tech:** Python, OpenCV, NumPy

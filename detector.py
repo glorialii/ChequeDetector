@@ -3,7 +3,7 @@ import numpy as np # NumPy: imgs are stored as NumPy arrays of numbers
 
 """
 
-How other code uses it (the "contract" agreed with the enhancement module):
+How other code uses it \\:
     cropped = detect_cheque(image)
         image   -> a colour photo loaded with cv2.imread (BGR, uint8 NumPy array)
         cropped -> the straightened colour cheque (BGR, uint8), or None if no
@@ -121,6 +121,54 @@ def is_valid_quad(approx, image_shape):
         return False, f"aspect ratio {aspect: .2f} not cheque-like"
     return True, "everything good, passed is_valid_quad"
 
-def find_cheque_corners() # IMPLEMENT...
+def find_cheque_corners(image, debug=False):
+    # find the 4 ordered corners of the cheque, or None if there isn't one
+    edges = preprocess(image)
 
-def detect_cheque() # IMPLEMENT...
+    # trace white edge lines into closed outlines (contours)
+    # RETR_EXTERNAL = only outer outlines, not shapes inside other shapes
+    contours, _ = cv2.findContours(edges,
+                    cv2.RETR_EXTERNAL,
+                    cv2.CHAIN_APPROX_SIMPLE)
+
+    # try the 10 biggest outlines first; the cheque is usually the biggest thing
+    for c in sorted(contours, key=cv2.contourArea, reverse=True)[:10]:
+        # simplify wobbly outline down to its main corners
+        perimeter = cv2.arcLength(c, True)
+        approx = cv2.approxPolyDP(c, APPROX_EPSILON * perimeter, True)
+
+        ok, reason = is_valid_quad(approx, image.shape)
+        if debug:
+            print(f"candidate corners={len(approx)} -> {reason}")
+
+        if ok:
+            return order_corners(approx)
+
+    return None # nothing passed the checks
+        
+
+    
+def detect_cheque(image, debug=False):
+    # MAIN FUNCTION: color photo in, straightened colour cheque out (or None)
+    # reject anything that isn't a colour image (e.g., file failed to load)
+
+    if image is None or not isinstance(image, np.ndarray) or image.ndim != 3:
+        return None
+
+    corners = find_cheque_corners(image, debug=debug)
+    if corners is None:
+        return None
+
+    # where each corner should end up in the flat output image
+    width, height = output_size(corners)
+
+    target = np.array([[0,0], # top left
+                       [width - 1, 0], # top right
+                       [width - 1, height - 1], # bottom right
+                       [0, height - 1]], # bottom left
+                       dtype="float32")
+
+    # work out the 'stretch' from photo corners to flat rectangle, then apply it
+    M = cv2.getPerspectiveTransform(corners, target)
+
+    return cv2.warpPerspective(image, M, (width, height))

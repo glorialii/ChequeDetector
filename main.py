@@ -1,3 +1,4 @@
+# main.py
 """
 MAIN SCRIPT:
 - runs pipeline on one photo/whole folder
@@ -14,7 +15,7 @@ from pathlib import Path
 
 import cv2
 
-from detector import detect_cheque, find_cheque_corners
+from detector import detect_cheque, locate_cheque
 # from Gillian's code import main function; uncomment once Gillian's enhancer exists
 
 
@@ -37,7 +38,7 @@ def run_one(path, out_dir):
         print(f"{path.name}: FAILED (no cheque found) [{ms:.0f} ms]")
         return
 
-    corners = find_cheque_corners(image)
+    corners = locate_cheque(image)
     overlay = image.copy()
     cv2.polylines(overlay, [corners.astype(int)],
                   True, (0,255,0), 4)
@@ -66,3 +67,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# end of main.py

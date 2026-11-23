@@ -1,9 +1,10 @@
+# detector.py
 import cv2 # OpenCV
 import numpy as np # NumPy: imgs are stored as NumPy arrays of numbers
 
 """
 
-How other code uses it \\:
+How other code uses it:
     cropped = detect_cheque(image)
         image   -> a colour photo loaded with cv2.imread (BGR, uint8 NumPy array)
         cropped -> the straightened colour cheque (BGR, uint8), or None if no
@@ -30,6 +31,9 @@ BORDER_MARGIN = 5
 
 # width/height range; real cheques are around: 2.3 to 2.6
 ASPECT_MIN, ASPECT_MAX = 1.8, 3.2
+
+# detect size -> shrinks photo to find corners; esp for 4k photos
+DETECT_SIZE = 1000
 
 # FUNCTIONS
 
@@ -126,16 +130,20 @@ def find_cheque_corners(image, debug=False):
     edges = preprocess(image)
 
     # trace white edge lines into closed outlines (contours)
-    # RETR_EXTERNAL = only outer outlines, not shapes inside other shapes
+    # RETR_LIST = looks at outlines inside other shapes; so inner edges also count when outer edge has glare
     contours, _ = cv2.findContours(edges,
-                    cv2.RETR_EXTERNAL,
+                    cv2.RETR_LIST,
                     cv2.CHAIN_APPROX_SIMPLE)
 
     # try the 10 biggest outlines first; the cheque is usually the biggest thing
     for c in sorted(contours, key=cv2.contourArea, reverse=True)[:10]:
         # simplify wobbly outline down to its main corners
-        perimeter = cv2.arcLength(c, True)
-        approx = cv2.approxPolyDP(c, APPROX_EPSILON * perimeter, True)
+        # convex hull = "rubber band" aroudn outline - fills in small dents
+
+        hull = cv2.convexHull(c)
+        
+        perimeter = cv2.arcLength(hull, True)
+        approx = cv2.approxPolyDP(hull, APPROX_EPSILON * perimeter, True)
 
         ok, reason = is_valid_quad(approx, image.shape)
         if debug:
@@ -146,7 +154,17 @@ def find_cheque_corners(image, debug=False):
 
     return None # nothing passed the checks
         
+def locate_cheque(image, debug=False):
+    # 4 corners of the cheque in full size photo coordinates, or None
+    # shrink big photos so blur/edge settings work on the same on any camera,
+    # find corners on small copy then scale them back to full size
 
+    scale = min(1.0, DETECT_SIZE / max(image.shape[:2]))
+    small = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    corners = find_cheque_corners(small, debug=debug)
+    if corners is None:
+        return None
+    return (corners / scale).astype("float32") # back to full-size photo coordinates
     
 def detect_cheque(image, debug=False):
     # MAIN FUNCTION: color photo in, straightened colour cheque out (or None)
@@ -155,7 +173,7 @@ def detect_cheque(image, debug=False):
     if image is None or not isinstance(image, np.ndarray) or image.ndim != 3:
         return None
 
-    corners = find_cheque_corners(image, debug=debug)
+    corners = locate_cheque(image, debug=debug)
     if corners is None:
         return None
 
@@ -172,3 +190,5 @@ def detect_cheque(image, debug=False):
     M = cv2.getPerspectiveTransform(corners, target)
 
     return cv2.warpPerspective(image, M, (width, height))
+
+# end of detector.py

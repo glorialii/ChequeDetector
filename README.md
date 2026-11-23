@@ -61,8 +61,11 @@ Replace `~/repositoryof/` with wherever you cloned this repo, and `~/repositoryo
 | --- | --- |
 | `python3 main.py ~/repositoryofimg/` | Runs every photo in a folder |
 | `python3 evaluate.py test_images` | Prints detection metrics for the report (see [Evaluation](#evaluation)) |
+| `python3 main.py test_images --method XXX`| Can select between niblack and sauv methods of binirzation|
+| `python3 main.py test_images --window XXX`| Can select window size for binarization |
+| `python3 main.py test_images --k XXX`| Can select k value (senstivitiy of binarization) |
 
-**Output:** results are saved to `output/` inside the project folder:
+**Output:** results are saved to `output/` inside the project folder
 
 | File | Contents |
 | --- | --- |
@@ -70,6 +73,8 @@ Replace `~/repositoryof/` with wherever you cloned this repo, and `~/repositoryo
 | `<imgname>_crop.jpg` | The straightened, full-resolution colour cheque |
 
 The terminal also prints `SUCCESS` or `FAILED` for each photo, & how long it took.
+
+additionally steps of the binarization is the binarize_steps folder
 
 ---
 
@@ -113,6 +118,7 @@ if cropped is not None:
 detector.py    detection module: detect_cheque(image)
 main.py        runs the pipeline on a photo or folder (entry point)
 evaluate.py    detection metrics for the report -> results.csv
+binarize_cheque.py binarize the cropped photo for easy readability 
 ```
 
 ---

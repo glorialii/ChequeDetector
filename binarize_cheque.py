@@ -55,14 +55,6 @@ def local_contrast_enhancement(gray, strength=1.5, sigma=15):
 
     return enhanced.astype(np.uint8)
 
-def remove_speckles(binary: np.ndarray, min_area: int) -> np.ndarray:
-    inv = cv2.bitwise_not(binary) #inverted
-    n, labels, stats, _ = cv2.connectedComponentsWithStats(inv, connectivity=8) #Connection limit (componets)
-    keep = np.zeros_like(inv) # new image
-    for i in range(1, n): # loop through componets
-        if stats[i, cv2.CC_STAT_AREA] >= min_area: # check if componet is great enough to not be a outlier
-            keep[labels == i] = 255 # set white
-    return cv2.bitwise_not(keep)
 
 def binarize_cheque(
     img_bgr: np.ndarray,
@@ -74,6 +66,7 @@ def binarize_cheque(
 ) -> np.ndarray:
     # 1. Upscale small images so strokes are several pixels wide
     h, w = img_bgr.shape[:2]
+    print(target_width)
     if w < target_width:
         s = target_width / w
         img_bgr = cv2.resize(img_bgr, None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC)

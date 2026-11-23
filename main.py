@@ -51,7 +51,7 @@ def run_one(path, out_dir,args):
     cv2.imwrite(str(out_dir / f"{path.stem}_crop.jpg"), crop)
 
     # Gillian IMPLEMENT HERE 
-    result = binarize_cheque(crop, args.method, args.window, args.k, Path("binarize_steps"))
+    result = binarize_cheque(crop, args.method, args.window, args.k, args.width,Path("binarize_steps"))
     cv2.imwrite(str(out_dir / f"{path.stem}_enhanced.jpg"), result)
 
     print(f"{path.name}: SUCCESS crop={crop.shape[1]}x{crop.shape[0]} [{ms:.0f} ms]")
@@ -63,9 +63,11 @@ def main():
     #     print(__doc__)
     #     sys.exit(1)
     p = argparse.ArgumentParser(description="Binarize a cheque image.")
+    p.add_argument("input", help="Path to cheque image (jpg/png/...)")
     p.add_argument("--method", choices=["sauvola", "niblack"], default="sauvola")
     p.add_argument("--window", type=int, default=25, help="Local window size (odd number)")
     p.add_argument("--k", type=float, default=0.34, help="Sauvola/Niblack sensitivity")
+    p.add_argument("--width", type=int, default=1800, help="Upscale images narrower than this")
     args = p.parse_args()
 
 

@@ -1,3 +1,4 @@
+# evaluate.py
 """
 MAINLY FOR REPORTING
 
@@ -81,7 +82,7 @@ def main():
     print(f"Median time per photo: {statistics.median(times):.1f} ms")
 
 
-# list the photos that went wrong, so you know which ones to look at
+    # list the photos that went wrong, so you know which ones to look at
     for r in positives:
         if not r["detected"]:
             print(f"    missed cheque: {r['file']}")
@@ -97,3 +98,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# end of evaluate.py

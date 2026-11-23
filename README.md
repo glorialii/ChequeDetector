@@ -1,8 +1,22 @@
-# ChequeDetector
-### Document Detection and Adaptive Image Enhancement
+<div align="center">
 
-**COMP 4102 – Computer Vision | Carleton University**
-**Team:** Gloria Li & Gillian Gonzales
+# ChequeDetector
+
+**Document Detection and Adaptive Image Enhancement**
+
+COMP 4102 – Computer Vision · Carleton University
+
+Gloria Li & Gillian Gonzales
+
+![Python](https://img.shields.io/badge/Python-3-blue) ![OpenCV](https://img.shields.io/badge/OpenCV-4-green) ![Status](https://img.shields.io/badge/status-in%20development-orange)
+
+</div>
+
+---
+
+**Contents:** [Overview](#overview) · [How to run](#how-to-run) · [Pipeline](#pipeline) · [Using the detector in code](#using-the-detector-in-code) · [Project structure](#project-structure) · [Evaluation](#evaluation) · [Edge cases](#edge-cases) · [Roadmap](#roadmap) · [Team](#team)
+
+---
 
 ## Overview
 
@@ -13,63 +27,109 @@ Our project has two parts:
 1. **Detection (Gloria):** find the cheque's four corners and correct the perspective.
 2. **Enhancement (Gillian):** improve the readability of the straightened cheque.
 
-We test only with fictional or voided cheques. This is not meant for real cheque validation or banking.
+> **Note:** we test only with fictional or voided cheques. This project is not meant for real cheque validation or banking.
 
-**Status:** in development.
+> **Status:** detection is working; enhancement is in progress.
+
+---
+
+## How to run
+
+**1. Install the requirements** (first time only)
+
+```bash
+pip3 install opencv-python numpy
+```
+
+**2. Go to the project folder**
+
+```bash
+cd ~/repositoryof/ChequeDetector
+```
+
+**3. Run the detector on a photo**
+
+```bash
+python3 main.py ~/repositoryofimg/imgname.jpg
+```
+
+Replace `~/repositoryof/` with wherever you cloned the repo, and `~/repositoryofimg/imgname.jpg` with the path to your photo. On macOS, you can drag the photo into the terminal to paste its path.
+
+**More options**
+
+| Command | What it does |
+| --- | --- |
+| `python3 main.py ~/repositoryofimg/` | Runs every photo in a folder |
+| `python3 evaluate.py test_images` | Prints detection metrics for the report (see [Evaluation](#evaluation)) |
+
+**Output:** results are saved to `output/` inside the project folder:
+
+| File | Contents |
+| --- | --- |
+| `<imgname>_overlay.jpg` | The original photo with the detected cheque outlined in green |
+| `<imgname>_crop.jpg` | The straightened, full-resolution colour cheque |
+
+The terminal also prints `SUCCESS` or `FAILED` for each photo, plus how long it took.
+
+---
 
 ## Pipeline
 
 ```text
-Input photo -> Validate -> Blur -> Edge detection (per colour channel) -> Contours
-  -> Find a 4-sided shape -> Check it looks like a cheque -> Order corners
+Input photo -> Shrink to 1000 px -> Blur -> Edges (per colour channel) -> Contours
+  -> Convex hull + 4-corner check -> Order corners -> Scale back to full size
   -> Perspective warp -> Enhancement -> Final image
 ```
 
-**Detection.** We blur the colour image and run Canny edge detection on each of the blue, green and red channels, then combine the results. We don't convert to grayscale first. We then find contours, simplify them with `approxPolyDP`, and keep the first shape that passes our checks:
+**Detection** (`detector.py`):
 
-- exactly 4 corners
-- convex
-- covers at least 10% of the photo
-- doesn't touch the photo's border, since that usually means a corner is cut off
-- has a cheque-like width-to-height ratio (1.8 to 3.2)
+1. **Shrink** (`locate_cheque`): we find the corners on a copy of the photo whose longest side is 1000 px (`DETECT_SIZE`). This makes the settings work the same for any camera, including 4K photos.
+2. **Edges** (`preprocess`): we apply a 5×5 Gaussian blur, then run Canny edge detection on the blue, green and red channels separately and combine them. We don't convert to grayscale, so edges that differ only in colour are kept.
+3. **Shapes** (`find_cheque_corners`): `findContours` with `RETR_LIST` keeps inner outlines too. Each outline gets a convex hull and is simplified with `approxPolyDP`. This lets us find the cheque even when glare or a table seam touches its edge.
+4. **Validation** (`is_valid_quad`): we keep a shape only if it has 4 corners, is convex, covers at least 10% of the photo, doesn't touch the photo border, and has a cheque-like aspect ratio (1.8 to 3.2).
+5. **Straighten** (`detect_cheque`): we order the corners, scale them back to the full-size photo, and use `getPerspectiveTransform` and `warpPerspective` to get a sharp, flat colour crop.
 
-Finally, we order the corners and use `getPerspectiveTransform` and `warpPerspective` to get a flat, colour crop.
+**Enhancement** (Gillian): this is still being chosen. Options include adaptive thresholding, local contrast enhancement, illumination correction and Retinex-based enhancement, each compared against a simple baseline.
 
-**Enhancement.** We're still choosing a method. Options include adaptive thresholding, local contrast enhancement, illumination correction and Retinex-based enhancement. We'll compare each one against a simple baseline.
+---
 
-## Using it
-
-```bash
-
-to run: cd ~/repositoryof/ChequeDetector
-        python3 main.py ~/repositoryofimg/imgname.jpg
-pip install -r requirements.txt
-python detection/make_test_image.py                    # makes a fake tilted cheque
-python detection/run_detector.py synthetic_cheque.jpg  # saves overlay + crop to output/
-python detection/evaluate.py test_images               # success rate, false positives, timing
-```
-
-`evaluate.py` expects two folders: `test_images/cheques/` for photos that should be detected, and `test_images/no_cheque/` for photos that should be rejected.
-
-In code, the detector and enhancer pass NumPy arrays to each other:
+## Using the detector in code
 
 ```python
-image = cv2.imread("sample_cheque.jpg")
-cropped = detect_cheque(image)        # colour BGR crop, or None if no cheque found
+import cv2
+from detector import detect_cheque
+
+image = cv2.imread("photo.jpg")
+cropped = detect_cheque(image)   # BGR colour crop, or None if no cheque found
 if cropped is not None:
     enhanced = enhance_cheque(cropped)
 ```
 
+---
+
 ## Project structure
 
 ```text
-detection/
-  detector.py          detect_cheque(image)
-  run_detector.py      try it on a photo or folder
-  evaluate.py          metrics for the report
-  make_test_image.py   synthetic test photo
-requirements.txt
+detector.py    detection module: detect_cheque(image)
+main.py        runs the pipeline on a photo or folder (entry point)
+evaluate.py    detection metrics for the report -> results.csv
 ```
+
+---
+
+## Evaluation
+
+Put the test photos in two folders, then run `python3 evaluate.py test_images`:
+
+```text
+test_images/
+  cheques/      photos with a full cheque (should be detected)
+  no_cheque/    no cheque, a cut-off cheque, or another rectangle (should be rejected)
+```
+
+It prints the **detection success rate**, the **false positive rate** and the **average and median time** per photo, and saves every result to `results.csv`. We assess readability before vs. after enhancement using OCR accuracy or a readability rubric.
+
+---
 
 ## Edge cases
 
@@ -78,28 +138,28 @@ requirements.txt
 | Full cheque visible | Crop, straighten and enhance |
 | A corner is outside the photo | Reject |
 | No cheque in the photo | Reject |
-| Another rectangle (book, phone) | Reject if it isn't cheque-shaped (may still pass) |
-| Too dark or blurry | Try anyway, reject if no valid shape |
-| Unsupported or corrupted file | Show an input error |
+| Another rectangle (book, phone) | Reject if it isn't cheque-shaped (a cheque-shaped object may still pass) |
+| Glare or a seam touching the cheque edge | Still detected (convex hull + inner outlines) |
+| Too dark or blurry | Try anyway; reject if no valid shape is found |
+| Unsupported or corrupted file | Report an input error |
+| Cheque photographed sideways | Detected, but the crop comes out tall and may need rotating |
 
 A geometric detector can't fully guarantee that a rectangle is a cheque. This is one of the limitations we'll discuss.
 
-## Evaluation
-
-- **Detection success rate:** % of cheque photos detected correctly
-- **False positive rate:** % of non-cheque photos wrongly accepted
-- **Readability:** before vs. after enhancement, using OCR accuracy or a readability rubric
-- **Processing time:** average and median per image
+---
 
 ## Roadmap
 
 - [x] Detection pipeline (edges, contours, corners, perspective correction)
 - [x] Geometric validation and invalid input handling
-- [x] Evaluation script
-- [ ] Collect real test photos and tune detection
+- [x] Large-photo and glare handling
+- [x] Main script and evaluation script
+- [ ] Collect real test photos and evaluate detection
 - [ ] Enhancement baseline and advanced method
-- [ ] Integrate detection and enhancement
-- [ ] Evaluate, write the report and prepare the demo
+- [ ] Integrate enhancement into `main.py`
+- [ ] Final report and demo
+
+---
 
 ## Team
 
@@ -107,4 +167,4 @@ A geometric detector can't fully guarantee that a rectangle is a cheque. This is
 - **Gillian:** enhancement research, implementation, readability evaluation and documentation
 - **Both:** dataset, evaluation, final report and demo
 
-**Tech:** Python, OpenCV, NumPy
+**Built with:** Python · OpenCV · NumPy

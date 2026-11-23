@@ -40,6 +40,9 @@ Finally, we order the corners and use `getPerspectiveTransform` and `warpPerspec
 ## Using it
 
 ```bash
+
+to run: cd ~/repositoryof/ChequeDetector
+        python3 main.py ~/repositoryofimg/imgname.jpg
 pip install -r requirements.txt
 python detection/make_test_image.py                    # makes a fake tilted cheque
 python detection/run_detector.py synthetic_cheque.jpg  # saves overlay + crop to output/

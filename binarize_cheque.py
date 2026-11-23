@@ -70,7 +70,6 @@ def binarize_cheque(
     window: int = 31,
     k: float = 0.2,
     target_width: int = 1800,
-    min_speckle: int = 6,
     debug_dir: Path | None = None,
 ) -> np.ndarray:
     # 1. Upscale small images so strokes are several pixels wide
@@ -95,14 +94,13 @@ def binarize_cheque(
     if method == "niblack":
         binary = niblack(enhanced, win, -abs(k))
     else:  # sauvola
-        print("sauv")
         binary = sauvola(enhanced, win, k)
 
-        debug_dir.mkdir(parents=True, exist_ok=True)
-        cv2.imwrite(str(debug_dir / "1_gray.png"), gray)
-        cv2.imwrite(str(debug_dir / "2_flat.png"), flat)
-        cv2.imwrite(str(debug_dir / "3_enhanced.png"), enhanced)
-        cv2.imwrite(str(debug_dir / "4_binary.png"), binary)
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(debug_dir / "1_gray.png"), gray)
+    cv2.imwrite(str(debug_dir / "2_flat.png"), flat)
+    cv2.imwrite(str(debug_dir / "3_enhanced.png"), enhanced)
+    cv2.imwrite(str(debug_dir / "4_binary.png"), binary)
 
     return binary
 
@@ -110,22 +108,18 @@ def binarize_cheque(
 def main() -> int:
     p = argparse.ArgumentParser(description="Binarize a cheque image.")
     p.add_argument("input", help="Path to cheque image (jpg/png/...)")
-    p.add_argument("-o", "--output", help="Output path (default: <input>_binary.png)")
     p.add_argument("--method", choices=["sauvola", "niblack"], default="sauvola")
     p.add_argument("--window", type=int, default=25, help="Local window size (odd number)")
     p.add_argument("--k", type=float, default=0.34, help="Sauvola/Niblack sensitivity")
     p.add_argument("--width", type=int, default=1800, help="Upscale images narrower than this")
-    p.add_argument("--min-speckle", type=int, default=6, help="Remove black blobs smaller than this")
-    p.add_argument("--debug", action="store_true", help="Save intermediate steps")
     args = p.parse_args()
 
     src = Path(args.input)
     out = Path(args.output) if args.output else src.with_name(src.stem + "_binary.png")
-    dbg = out.parent / (out.stem + "_debug") if args.debug else None
 
-    img = load_image(str(src))
+    img = load_image(src)
     result = binarize_cheque(
-        img, args.method, args.window, args.k, args.width, args.min_speckle, dbg
+        img, args.method, args.window, args.k, args.width, Path("out_debug")
     )
     cv2.imwrite(str(out), result)
     print(f"Saved: {out}  ({result.shape[1]}x{result.shape[0]})")

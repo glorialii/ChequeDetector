@@ -13,15 +13,18 @@ import sys
 import time
 from pathlib import Path
 
+import argparse
+
 import cv2
 
 from detector import detect_cheque, locate_cheque
+from binarize_cheque import binarize_cheque
 # from Gillian's code import main function; uncomment once Gillian's enhancer exists
 
 
 SUPPORTED = {".png", ".jpg", ".jpeg"}
 
-def run_one(path, out_dir):
+def run_one(path, out_dir,args):
     if path.suffix.lower() not in SUPPORTED:
         print(f"{path.name}: FAILED (unsupported format)")
         return
@@ -47,22 +50,31 @@ def run_one(path, out_dir):
 
     cv2.imwrite(str(out_dir / f"{path.stem}_crop.jpg"), crop)
 
-    # Gillian IMPLEMENT HERE
-    # if your code is called enhanced; cv2.imwrite(str(out_dir / f"{path.stem}_enhanced.jpg"), enhanced)
+    # Gillian IMPLEMENT HERE 
+    result = binarize_cheque(crop, args.method, args.window, args.k, Path("binarize_steps"))
+    cv2.imwrite(str(out_dir / f"{path.stem}_enhanced.jpg"), result)
 
     print(f"{path.name}: SUCCESS crop={crop.shape[1]}x{crop.shape[0]} [{ms:.0f} ms]")
 
 
 def main():
-    if len(sys.argv) != 2:
-        print(__doc__)
-        sys.exit(1)
+    # Gillian: Needed to remove this for editing args
+    # if len(sys.argv) != 2:
+    #     print(__doc__)
+    #     sys.exit(1)
+    p = argparse.ArgumentParser(description="Binarize a cheque image.")
+    p.add_argument("--method", choices=["sauvola", "niblack"], default="sauvola")
+    p.add_argument("--window", type=int, default=25, help="Local window size (odd number)")
+    p.add_argument("--k", type=float, default=0.34, help="Sauvola/Niblack sensitivity")
+    args = p.parse_args()
+
+
     target = Path(sys.argv[1])
     out_dir = Path("output")
     out_dir.mkdir(exist_ok=True)
     paths = sorted(target.iterdir()) if target.is_dir() else [target]
     for p in paths:
-        run_one(p, out_dir)
+        run_one(p, out_dir,args)
 
 
 if __name__ == "__main__":

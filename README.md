@@ -8,7 +8,7 @@ COMP 4102 – Computer Vision · Carleton University
 
 Gloria Li & Gillian Gonzales
 
-![Python](https://img.shields.io/badge/Python-3-blue) ![OpenCV](https://img.shields.io/badge/OpenCV-4-green) ![Status](https://img.shields.io/badge/status-in%20development-orange)
+Using OpenCV and Python3
 
 </div>
 

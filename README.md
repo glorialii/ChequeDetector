@@ -8,7 +8,7 @@ COMP 4102 – Computer Vision · Carleton University
 
 Gloria Li & Gillian Gonzales
 
-Using OpenCV and Python3
+Using OpenCV, NumPy, Python3
 
 </div>
 
@@ -27,7 +27,7 @@ Our project has two parts:
 1. **Detection (Gloria):** find the cheque's four corners and correct the perspective.
 2. **Enhancement (Gillian):** improve the readability of the straightened cheque.
 
-> **Note:** we test only with fictional or voided cheques. This project is not meant for real cheque validation or banking.
+> **Note:** we tested only with fictional or voided cheques. This project is not meant for real cheque validation or banking.
 
 > **Status:** detection is working; enhancement is in progress.
 
@@ -35,13 +35,13 @@ Our project has two parts:
 
 ## How to run
 
-**1. Install the requirements** (first time only)
+**1. Install the requirements** (if opencv not installed yet)
 
 ```bash
 pip3 install opencv-python numpy
 ```
 
-**2. Go to the project folder**
+**2. Go to project folder**
 
 ```bash
 cd ~/repositoryof/ChequeDetector
@@ -53,7 +53,7 @@ cd ~/repositoryof/ChequeDetector
 python3 main.py ~/repositoryofimg/imgname.jpg
 ```
 
-Replace `~/repositoryof/` with wherever you cloned the repo, and `~/repositoryofimg/imgname.jpg` with the path to your photo. On macOS, you can drag the photo into the terminal to paste its path.
+Replace `~/repositoryof/` with wherever you cloned this repo, and `~/repositoryofimg/imgname.jpg` with the path to your photo.
 
 **More options**
 
@@ -69,7 +69,7 @@ Replace `~/repositoryof/` with wherever you cloned the repo, and `~/repositoryof
 | `<imgname>_overlay.jpg` | The original photo with the detected cheque outlined in green |
 | `<imgname>_crop.jpg` | The straightened, full-resolution colour cheque |
 
-The terminal also prints `SUCCESS` or `FAILED` for each photo, plus how long it took.
+The terminal also prints `SUCCESS` or `FAILED` for each photo, & how long it took.
 
 ---
 
@@ -83,11 +83,11 @@ Input photo -> Shrink to 1000 px -> Blur -> Edges (per colour channel) -> Contou
 
 **Detection** (`detector.py`):
 
-1. **Shrink** (`locate_cheque`): we find the corners on a copy of the photo whose longest side is 1000 px (`DETECT_SIZE`). This makes the settings work the same for any camera, including 4K photos.
-2. **Edges** (`preprocess`): we apply a 5×5 Gaussian blur, then run Canny edge detection on the blue, green and red channels separately and combine them. We don't convert to grayscale, so edges that differ only in colour are kept.
+1. **Shrink** (`locate_cheque`): the detector finds the corners on a copy of the photo whose longest side is 1000 px (`DETECT_SIZE`). This makes the settings work the same for any camera, including 4K photos.
+2. **Edges** (`preprocess`): then it applies a 5×5 Gaussian blur, then runs Canny edge detection on the blue, green and red channels separately and combine them. We don't convert to grayscale, so edges that differ only in colour are kept.
 3. **Shapes** (`find_cheque_corners`): `findContours` with `RETR_LIST` keeps inner outlines too. Each outline gets a convex hull and is simplified with `approxPolyDP`. This lets us find the cheque even when glare or a table seam touches its edge.
-4. **Validation** (`is_valid_quad`): we keep a shape only if it has 4 corners, is convex, covers at least 10% of the photo, doesn't touch the photo border, and has a cheque-like aspect ratio (1.8 to 3.2).
-5. **Straighten** (`detect_cheque`): we order the corners, scale them back to the full-size photo, and use `getPerspectiveTransform` and `warpPerspective` to get a sharp, flat colour crop.
+4. **Validation** (`is_valid_quad`): then, the detector keeps a shape only if it has 4 corners, is convex, covers at least 10% of the photo, doesn't touch the photo border, and has a cheque-like aspect ratio (1.8 to 3.2).
+5. **Straighten** (`detect_cheque`): finally, it orders the corners, scales them back to the full-size photo, and uses `getPerspectiveTransform` and `warpPerspective` to get a sharp, flat colour crop.
 
 **Enhancement** (Gillian): this is still being chosen. Options include adaptive thresholding, local contrast enhancement, illumination correction and Retinex-based enhancement, each compared against a simple baseline.
 

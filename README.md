@@ -61,7 +61,7 @@ Replace `~/repositoryof/` with wherever you cloned this repo, and `~/repositoryo
 | --- | --- |
 | `python3 main.py ~/repositoryofimg/` | Runs every photo in a folder |
 | `python3 evaluate.py test_images` | Prints detection metrics for the report (see [Evaluation](#evaluation)) |
-| `python3 main.py test_images --method XXX`| Can select between niblack and sauv methods of binirzation|
+| `python3 main.py test_images --method XXX`| Can select between niblack and sauvola methods of binirzation|
 | `python3 main.py test_images --window XXX`| Can select window size for binarization |
 | `python3 main.py test_images --k XXX`| Can select k value (senstivitiy of binarization) |
 

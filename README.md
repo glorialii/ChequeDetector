@@ -11,6 +11,6 @@ Results go in output/. The steps of the binarization for each photo go in binari
 
 Options: --method niblack (default is sauvola), --window and --k to tune it (defaults 25 and 0.34), --verbose to see why shapes got accepted or rejected.
 
-For detection stats, put photos in test_images/cheques and test_images/no_cheque, then run python3 evaluate.py test_images
+For detection stats, put photos in test_images/cheques and test_images/no_cheque
 
-detector.py finds and straightens the cheque, binarize_cheque.py makes it black and white, main.py runs both, evaluate.py gets the stats.
+detector.py finds and straightens the cheque, binarize_cheque.py makes it black and white, main.py runs both.
